@@ -1,0 +1,16 @@
+/bin/
+/tmp/
+.env
+.env.local
+*.out
+*.test
+coverage.*
+.DS_Store
+.idea/
+.vscode/
+/vendor/
+.claude/
+
+# Private assignment prompt — author-side only
+Notification Service Assignment.pdf
+
