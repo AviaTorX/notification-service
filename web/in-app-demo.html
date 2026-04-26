@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>notifd — in-app feed demo</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  :root { color-scheme: light dark; }
+  body {
+    font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    max-width: 720px; margin: 2rem auto; padding: 0 1rem;
+  }
+  header { display: flex; justify-content: space-between; align-items: baseline; }
+  h1 { font-size: 1.25rem; margin: 0; }
+  .muted { color: #888; font-size: 0.85rem; }
+  input[type=text] { padding: 0.35rem 0.5rem; font-size: 0.9rem; width: 18rem; }
+  button { padding: 0.35rem 0.7rem; cursor: pointer; }
+  .item {
+    padding: 0.8rem 1rem; margin: 0.6rem 0; border: 1px solid #ddd; border-radius: 8px;
+    background: #fafafa;
+  }
+  @media (prefers-color-scheme: dark) { .item { background: #1e1e1e; border-color: #333; } }
+  .item.unread { border-left: 4px solid #3b82f6; }
+  .title { font-weight: 600; margin-bottom: 0.15rem; }
+  .meta { font-size: 0.8rem; color: #888; margin-top: 0.25rem; }
+  .empty { color: #888; padding: 1.5rem 0; text-align: center; }
+  .bar { display: flex; gap: 0.5rem; align-items: center; margin: 1rem 0; flex-wrap: wrap; }
+  .more-bar { text-align: center; margin: 1rem 0; }
+  .err {
+    padding: 0.8rem; margin: 1rem 0; border-radius: 6px;
+    background: #fff3cd; color: #664d03; border: 1px solid #ffe69c;
+  }
+  @media (prefers-color-scheme: dark) {
+    .err { background: #3b2f00; color: #ffe69c; border-color: #665200; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>notifd — in-app feed</h1>
+  <span class="muted">Polls <code>/v1/users/:id/in-app-notifications</code> every 3 seconds.</span>
+</header>
+
+<div class="bar">
+  <label>API base <input id="apiBase" type="text" value="http://localhost:8080" /></label>
+  <label>User ID <input id="userId" type="text" value="00000000-0000-0000-0000-000000000001" /></label>
+  <label>API Key <input id="apiKey" type="text" value="dev-api-key-change-me" /></label>
+  <label><input id="unreadOnly" type="checkbox" /> Unread only</label>
+  <button id="refresh">Refresh</button>
+</div>
+
+<div id="out"><div class="empty">Loading…</div></div>
+<div id="more" class="more-bar"></div>
+
+<script>
+// Response shape (API contract):
+//   { "items": [...], "next_cursor": "<rfc3339nano>|<uuid>" }
+// Older dev builds returned a bare array; we cope with either so the demo
+// doesn't break mid-migration.
+const out = document.getElementById('out');
+const moreBar = document.getElementById('more');
+const baseEl = document.getElementById('apiBase');
+const userEl = document.getElementById('userId');
+const keyEl = document.getElementById('apiKey');
+const unreadEl = document.getElementById('unreadOnly');
+const btnEl = document.getElementById('refresh');
+
+let nextCursor = null;
+let accumulated = [];
+
+function apiURL(path, params) {
+  const u = new URL(baseEl.value.trim().replace(/\/+$/, '') + path);
+  for (const [k, v] of Object.entries(params || {})) {
+    if (v !== null && v !== undefined && v !== '') u.searchParams.set(k, v);
+  }
+  return u;
+}
+
+async function fetchPage({ before } = {}) {
+  const user = userEl.value.trim();
+  const key = keyEl.value.trim();
+  const params = {};
+  if (unreadEl.checked) params.unread = 'true';
+  if (before) params.before = before;
+
+  const resp = await fetch(apiURL(`/v1/users/${user}/in-app-notifications`, params), {
+    headers: { 'X-API-Key': key },
+  });
+  if (!resp.ok) {
+    const text = await resp.text();
+    throw new Error(`HTTP ${resp.status}: ${text}`);
+  }
+  const body = await resp.json();
+  // Normalize old & new shapes.
+  if (Array.isArray(body)) return { items: body, next_cursor: null };
+  return { items: body.items || [], next_cursor: body.next_cursor || null };
+}
+
+function render(items) {
+  if (!items.length) {
+    out.innerHTML = `<div class="empty">No notifications yet. Send one via <code>POST /v1/notifications</code>.</div>`;
+    return;
+  }
+  out.innerHTML = items.map(n => `
+    <div class="item ${n.read_at ? '' : 'unread'}">
+      <div class="title">${escape(n.title || '')}</div>
+      <div>${escape(n.body || '')}</div>
+      <div class="meta">
+        ${new Date(n.created_at).toLocaleString()}
+        · ${n.read_at ? 'read' : 'unread'}
+        ${n.data && n.data.template ? `· template: <code>${escape(n.data.template)}</code>` : ''}
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderMoreButton() {
+  if (!nextCursor) {
+    moreBar.innerHTML = '';
+    return;
+  }
+  moreBar.innerHTML = `<button id="moreBtn">Load older…</button>`;
+  document.getElementById('moreBtn').addEventListener('click', loadMore);
+}
+
+function showError(err) {
+  const likelyCORS = /failed to fetch|Network ?Error|CORS/i.test(err.message || '');
+  out.innerHTML = `
+    <div class="err">
+      <b>Request failed:</b> ${escape(err.message)}
+      ${likelyCORS ? `<br/><br/>
+        If you opened this file directly (<code>file://</code>), the browser's CORS
+        preflight must succeed. The API serves permissive CORS in dev; make sure
+        the service is running via <code>docker compose up</code> and that the API
+        base above matches.
+      ` : ''}
+    </div>`;
+}
+
+async function refresh() {
+  try {
+    const page = await fetchPage();
+    accumulated = page.items;
+    nextCursor = page.next_cursor;
+    render(accumulated);
+    renderMoreButton();
+  } catch (e) {
+    showError(e);
+  }
+}
+
+async function loadMore() {
+  try {
+    const page = await fetchPage({ before: nextCursor });
+    accumulated = accumulated.concat(page.items);
+    nextCursor = page.next_cursor;
+    render(accumulated);
+    renderMoreButton();
+  } catch (e) {
+    showError(e);
+  }
+}
+
+function escape(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+}
+
+btnEl.addEventListener('click', refresh);
+unreadEl.addEventListener('change', refresh);
+[baseEl, userEl, keyEl].forEach(el => el.addEventListener('change', refresh));
+refresh();
+// Poll the first page so newly-arrived notifications show up live. We
+// intentionally do NOT poll every page — the user scrolls manually.
+setInterval(refresh, 3000);
+</script>
+</body>
+</html>

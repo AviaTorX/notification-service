@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notifd-api
+  namespace: notifd
+spec:
+  replicas: 3
+  selector:
+    matchLabels: { app: notifd-api }
+  template:
+    metadata:
+      labels: { app: notifd-api }
+    spec:
+      containers:
+        - name: api
+          image: ghcr.io/avinash-shinde/notifd:latest
+          args: ["api"]
+          envFrom:
+            - secretRef: { name: notifd-env }
+          ports:
+            - containerPort: 8080
+              name: http
+          readinessProbe:
+            httpGet: { path: /readyz, port: http }
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: { path: /healthz, port: http }
+            periodSeconds: 10
+          resources:
+            requests: { cpu: 100m, memory: 128Mi }
+            limits:   { cpu: 500m, memory: 512Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: notifd-api
+  namespace: notifd
+spec:
+  selector: { app: notifd-api }
+  ports:
+    - port: 80
+      targetPort: http
+      name: http
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: notifd-api
+  namespace: notifd
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: notifd-api
+  minReplicas: 3
+  maxReplicas: 40
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target: { type: Utilization, averageUtilization: 70 }

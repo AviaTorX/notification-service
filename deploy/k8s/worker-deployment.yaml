@@ -1,0 +1,68 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notifd-worker
+  namespace: notifd
+spec:
+  replicas: 5
+  selector:
+    matchLabels: { app: notifd-worker }
+  template:
+    metadata:
+      labels: { app: notifd-worker }
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9100"
+    spec:
+      containers:
+        - name: worker
+          image: ghcr.io/avinash-shinde/notifd:latest
+          args: ["worker"]
+          envFrom:
+            - secretRef: { name: notifd-env }
+          env:
+            - name: WORKER_CONCURRENCY
+              value: "40"
+          ports:
+            - containerPort: 9100
+              name: metrics
+          resources:
+            requests: { cpu: 250m, memory: 256Mi }
+            limits:   { cpu: 1000m, memory: 1Gi }
+---
+# Autoscaling on queue depth uses the Prometheus Adapter to surface the
+# `asynq_queue_size{queue,state}` gauge (published by the worker itself —
+# see internal/worker/worker.go::publishQueueDepth) as an external metric.
+#
+# Wiring (one-time, documented here so a reviewer sees the full loop):
+#   1. Deploy the Prometheus Adapter with a rules block mapping:
+#         seriesQuery: 'asynq_queue_size{state="pending"}'
+#         resources: {overrides: {queue: {resource: "service"}}}
+#         name: {as: "asynq_queue_pending"}
+#         metricsQuery: 'sum(<<.Series>>{<<.LabelMatchers>>})'
+#   2. External-metrics API then exposes `asynq_queue_pending`.
+#   3. The HPA below selects on it. CPU is explicitly NOT used because
+#      workers spend ~all their time in provider I/O — the CPU signal is
+#      noise.
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: notifd-worker
+  namespace: notifd
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: notifd-worker
+  minReplicas: 5
+  maxReplicas: 200
+  metrics:
+    - type: External
+      external:
+        metric:
+          name: asynq_queue_pending
+          selector:
+            matchLabels: { queue: default }
+        target:
+          type: AverageValue
+          averageValue: "100"
