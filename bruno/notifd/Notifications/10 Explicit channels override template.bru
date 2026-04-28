@@ -1,0 +1,66 @@
+meta {
+  name: 10 Explicit channels override template
+  type: http
+  seq: 10
+}
+
+post {
+  url: {{baseUrl}}/v1/notifications
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "user_id": "{{demoUser}}",
+    "template_name": "welcome",
+    "channels": ["email"],
+    "variables": {
+      "name": "Avinash",
+      "product": "NotifCo"
+    }
+  }
+}
+
+script:post-response {
+  // Capture so follow-up fetches work during the demo.
+  if (res.getStatus() === 202 && res.getBody() && res.getBody().id) {
+    bru.setEnvVar("explicitChannelsNotifId", res.getBody().id);
+  }
+}
+
+tests {
+  test("returns 202 Accepted", function() {
+    expect(res.getStatus()).to.equal(202);
+  });
+  test("channels is exactly [email] — template defaults are ignored", function() {
+    expect(res.getBody().channels).to.deep.equal(["email"]);
+  });
+  test("template is still used for rendering (template_id set on the row)", function() {
+    expect(res.getBody().template_id).to.be.a("string");
+  });
+}
+
+docs {
+  Uses the `welcome` template (default_channels = [email, in_app]) but
+  the request body ALSO specifies `"channels": ["email"]`.
+
+  Resolution rule: **explicit channels WIN, template defaults are ignored**
+  (not merged). Template is still consulted for rendering — subject,
+  body_text, body_html, required_variables — just not for routing.
+
+  What you'll see:
+    - Response's `channels` field is exactly `["email"]`, not
+      `["email", "in_app"]`.
+    - Mailpit (:8025) shows the email landing.
+    - No in-app row gets created. Run Notifications/09 "List in-app
+      feed" right after this — the in-app feed does NOT get a new item
+      from THIS notification (any items you see are from earlier runs).
+    - template_id is set on the response because the template was still
+      used for rendering content.
+
+  Real-world use case: a caller wants to use the content from the
+  `welcome` template but wants to route it differently — e.g. email
+  only, because this particular trigger shouldn't show up in the user's
+  in-app feed.
+}

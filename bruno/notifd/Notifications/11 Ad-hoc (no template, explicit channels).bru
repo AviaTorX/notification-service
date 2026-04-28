@@ -1,0 +1,76 @@
+meta {
+  name: 11 Ad-hoc (no template, explicit channels)
+  type: http
+  seq: 11
+}
+
+post {
+  url: {{baseUrl}}/v1/notifications
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "user_id": "{{demoUser}}",
+    "channels": ["in_app"],
+    "variables": {
+      "subject": "One-off system alert",
+      "body_text": "Scheduled maintenance window starts in 30 minutes. Please save your work.",
+      "body_html": "<p><b>Scheduled maintenance</b> starts in 30 minutes. Please save your work.</p>"
+    }
+  }
+}
+
+script:post-response {
+  if (res.getStatus() === 202 && res.getBody() && res.getBody().id) {
+    bru.setEnvVar("adHocNotifId", res.getBody().id);
+  }
+}
+
+tests {
+  test("returns 202 Accepted", function() {
+    expect(res.getStatus()).to.equal(202);
+  });
+  test("template_id is absent — this is ad-hoc", function() {
+    expect(res.getBody().template_id).to.satisfy(function(v) {
+      return v === undefined || v === null;
+    });
+  });
+  test("channels is exactly [in_app]", function() {
+    expect(res.getBody().channels).to.deep.equal(["in_app"]);
+  });
+}
+
+docs {
+  No `template_id` or `template_name` in the request — this is the
+  **ad-hoc** path. When the dispatcher sees a notification with no
+  template snapshot, it falls back to reading `subject`, `body_text`,
+  and `body_html` directly from the `variables` map.
+
+  Rules for ad-hoc requests:
+    - `channels` MUST be provided explicitly. No template means no
+      default_channels to fall back to — omitting channels here would
+      return 400 "no channels specified and template has no defaults".
+    - Content keys (`subject`, `body_text`, `body_html`) are read from
+      `variables`. `body_text` is typically required for email and
+      in-app; `body_html` is optional (HTML alternative for email);
+      `subject` is required for email.
+    - `required_variables` validation is skipped because there's no
+      template to declare them.
+
+  Real-world use case: a one-off operational notification — "scheduled
+  maintenance," "incident update," "your account was created from a new
+  device" — where templating overhead isn't worth it and the caller
+  owns the content directly.
+
+  What you'll see:
+    - Response's `template_id` is null/absent.
+    - Run Notifications/09 "List in-app feed" after this — the in-app
+      feed gets a fresh row with title "One-off system alert" and the
+      maintenance body.
+
+  Tip: try running this WITHOUT the `channels` field to demonstrate the
+  400 error. The server would return:
+    `"error": "no channels specified and template has no defaults"`
+}
