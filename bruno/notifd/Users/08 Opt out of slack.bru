@@ -1,0 +1,36 @@
+meta {
+  name: 08 Opt out of slack
+  type: http
+  seq: 8
+}
+
+put {
+  url: {{baseUrl}}/v1/users/{{demoUser}}/preferences
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "channel": "slack",
+    "enabled": false
+  }
+}
+
+tests {
+  test("returns 204", function() {
+    expect(res.getStatus()).to.equal(204);
+  });
+}
+
+docs {
+  Disables slack for the demo user. Try it right before running
+  Notifications/07 "Slack-only (deploy_succeeded)" — the template
+  has default_channels [slack, in_app], but with slack opted out
+  only the in_app delivery happens. Run Users/10 to re-enable.
+
+  Subtle but worth noting: a user WITHOUT a slack_webhook can still
+  opt out of slack. The preference is about user intent, not about
+  whether the user has a slack address — the service doesn't
+  conflate the two.
+}

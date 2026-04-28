@@ -1,0 +1,28 @@
+meta {
+  name: 10 Opt back into slack
+  type: http
+  seq: 10
+}
+
+put {
+  url: {{baseUrl}}/v1/users/{{demoUser}}/preferences
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "channel": "slack",
+    "enabled": true
+  }
+}
+
+tests {
+  test("returns 204", function() {
+    expect(res.getStatus()).to.equal(204);
+  });
+}
+
+docs {
+  Re-enables slack.
+}

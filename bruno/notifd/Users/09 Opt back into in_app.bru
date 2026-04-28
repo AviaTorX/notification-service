@@ -1,0 +1,29 @@
+meta {
+  name: 09 Opt back into in_app
+  type: http
+  seq: 9
+}
+
+put {
+  url: {{baseUrl}}/v1/users/{{demoUser}}/preferences
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "channel": "in_app",
+    "enabled": true
+  }
+}
+
+tests {
+  test("returns 204", function() {
+    expect(res.getStatus()).to.equal(204);
+  });
+}
+
+docs {
+  Re-enables in_app. Upserts the same (user, channel) row — PUT is
+  the toggle, not insert-only.
+}

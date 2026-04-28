@@ -1,0 +1,36 @@
+meta {
+  name: 11 Invalid channel (400)
+  type: http
+  seq: 11
+}
+
+put {
+  url: {{baseUrl}}/v1/users/{{demoUser}}/preferences
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "channel": "sms",
+    "enabled": false
+  }
+}
+
+tests {
+  test("returns 400 Bad Request", function() {
+    expect(res.getStatus()).to.equal(400);
+  });
+  test("error message names the invalid channel", function() {
+    expect(res.getBody().error).to.contain("sms");
+  });
+}
+
+docs {
+  Deliberately sends an invalid channel name. The API validates
+  against the allowed set (email / slack / in_app) and returns
+  400 with a clear error. Also notice: even if this check were
+  somehow bypassed, the Postgres CHECK constraint on the
+  user_channel_preferences table would reject it at write time
+  — defense in depth.
+}

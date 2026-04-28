@@ -1,0 +1,33 @@
+meta {
+  name: 07 Opt out of in_app
+  type: http
+  seq: 7
+}
+
+put {
+  url: {{baseUrl}}/v1/users/{{demoUser}}/preferences
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "channel": "in_app",
+    "enabled": false
+  }
+}
+
+tests {
+  test("returns 204", function() {
+    expect(res.getStatus()).to.equal(204);
+  });
+}
+
+docs {
+  Disables the in_app channel for the demo user. Subsequent sends
+  that request in_app (either explicitly or via a template default)
+  will skip the in_app delivery — the worker filters at the
+  preference-check stage, not the API.
+
+  Pair with Users/09 "Opt back into in_app" to reset.
+}
