@@ -1,0 +1,21 @@
+meta {
+  name: 01 Healthz
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/healthz
+  body: none
+  auth: none
+}
+
+headers {
+  ~X-API-Key:
+}
+
+docs {
+  Liveness probe. Returns 200 as long as the HTTP server is up.
+  Does NOT check DB or Redis — that's /readyz. Kubernetes uses this
+  to decide "should I restart this pod?"
+}

@@ -1,0 +1,35 @@
+meta {
+  name: 04 Fetch by id
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/v1/notifications/{{notificationId}}
+  body: none
+  auth: none
+}
+
+tests {
+  test("returns 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  test("status is 'sent'", function() {
+    expect(res.getBody().status).to.equal("sent");
+  });
+  test("has per-channel deliveries", function() {
+    expect(res.getBody().deliveries).to.be.an("array");
+    expect(res.getBody().deliveries.length).to.be.greaterThan(0);
+  });
+}
+
+docs {
+  Fetches the notification from request #1 (ID captured into
+  `notificationId` env var). The response includes the per-channel
+  delivery ledger: for each channel, the status, attempts, provider ID,
+  sent_at timestamp, and any error.
+
+  If you run this right after #1, the worker has already delivered —
+  status is 'sent' and each delivery has a provider_id like
+  'smtp:mailhog:1025' or 'inapp:<uuid>'.
+}

@@ -1,0 +1,41 @@
+meta {
+  name: 09 List in-app feed
+  type: http
+  seq: 9
+}
+
+get {
+  url: {{baseUrl}}/v1/users/{{demoUser}}/in-app-notifications?limit=10
+  body: none
+  auth: none
+}
+
+params:query {
+  limit: 10
+  ~unread: true
+  ~before: 2026-04-28T00:00:00.000Z|00000000-0000-0000-0000-000000000000
+}
+
+tests {
+  test("returns 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  test("response has an items array", function() {
+    expect(res.getBody().items).to.be.an("array");
+  });
+}
+
+docs {
+  Pull the user's in-app feed. Response shape:
+
+      { "items": [...], "next_cursor": "<rfc3339nano>|<uuid>" }
+
+  Pagination is a compound keyset cursor on (created_at, id) so
+  same-timestamp rows never skip across pages. If `next_cursor` is
+  present, re-run with `before=<cursor>` for the next page.
+
+  Query params:
+    limit  - default 50, max 200
+    unread - if "true", filter to read_at IS NULL
+    before - paginate older; pass the previous response's next_cursor
+}

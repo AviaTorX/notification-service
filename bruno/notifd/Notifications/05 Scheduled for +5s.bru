@@ -1,0 +1,58 @@
+meta {
+  name: 05 Scheduled for +5s
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/v1/notifications
+  body: json
+  auth: none
+}
+
+script:pre-request {
+  // Build an RFC3339 timestamp 5 seconds from now and stuff it into
+  // a runtime variable so the body interpolation picks it up.
+  const future = new Date(Date.now() + 5000).toISOString();
+  bru.setVar("scheduledFor", future);
+}
+
+body:json {
+  {
+    "user_id": "{{demoUser}}",
+    "template_name": "welcome",
+    "variables": {
+      "name": "Delayed",
+      "product": "NotifCo"
+    },
+    "scheduled_for": "{{scheduledFor}}"
+  }
+}
+
+script:post-response {
+  if (res.getStatus() === 202 && res.getBody() && res.getBody().id) {
+    bru.setEnvVar("scheduledNotificationId", res.getBody().id);
+  }
+}
+
+tests {
+  test("returns 202", function() {
+    expect(res.getStatus()).to.equal(202);
+  });
+  test("scheduled_for is echoed back", function() {
+    expect(res.getBody().scheduled_for).to.equal(bru.getVar("scheduledFor"));
+  });
+  test("status is still 'queued' (not yet due)", function() {
+    expect(res.getBody().status).to.equal("queued");
+  });
+}
+
+docs {
+  Schedules a send for 5 seconds in the future. The pre-request script
+  computes the timestamp each time you run this so it's always +5s
+  from NOW.
+
+  Under the hood: Asynq stores the task in a Redis ZSET keyed by
+  fire-time. Asynq's scheduler moves it to the ready set at the right
+  moment. Wait 5+ seconds, run the next request to see it delivered.
+}

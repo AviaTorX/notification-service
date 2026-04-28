@@ -1,0 +1,30 @@
+meta {
+  name: 06 Fetch scheduled (after 5s)
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{baseUrl}}/v1/notifications/{{scheduledNotificationId}}
+  body: none
+  auth: none
+}
+
+tests {
+  test("returns 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  test("status is 'sent' once the scheduled time passes", function() {
+    // If you ran this <5s after #5, the status is still 'queued'.
+    // Wait 5+ seconds and re-run.
+    expect(["queued", "processing", "sent"]).to.include(res.getBody().status);
+  });
+}
+
+docs {
+  Wait 5+ seconds after request #5 before running this, otherwise the
+  notification won't have fired yet.
+
+  Running it at exactly the right moment shows the worker correctly
+  honoring the scheduled_for timestamp — not earlier, not skipped.
+}

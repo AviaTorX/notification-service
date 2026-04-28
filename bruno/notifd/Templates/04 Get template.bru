@@ -1,0 +1,24 @@
+meta {
+  name: 04 Get template
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/v1/templates/{{createdTemplateId}}
+  body: none
+  auth: none
+}
+
+tests {
+  test("returns 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  test("matches the template created in #2", function() {
+    expect(res.getBody().name).to.equal("security_alert");
+  });
+}
+
+docs {
+  Fetches by UUID. The ID was captured from request #2's response.
+}

@@ -71,6 +71,10 @@ bash scripts/demo.sh
 # or: make demo
 ```
 
+### Clicking through the demo in Bruno
+
+If you'd rather see the API exercised via a UI, open `bruno/notifd/` with [Bruno](https://www.usebruno.com/). Collection includes four folders (Health, Notifications, Templates, Users) with 23 requests total, auto-captured IDs between requests, and assertions on every response. See [`bruno/README.md`](bruno/README.md) for the full tour.
+
 ### Creating your own template and user via the API
 
 The migration seeds a demo user and three system templates (`welcome`, `password_reset`, `deploy_succeeded`). To register your own:
@@ -184,7 +188,8 @@ internal/apperr/         # typed errors for transient/permanent classification
 migrations/              # golang-migrate SQL (5 files)
 mocks/slack/             # small Go HTTP server that logs webhook POSTs
 deploy/k8s/              # minimal K8s manifests with HPA sketch
-scripts/demo.sh          # live walk-through of every feature
+scripts/demo.sh          # live walk-through of every feature (curl)
+bruno/notifd/            # Bruno API collection — same walkthrough via UI
 tests/e2e/               # opt-in HTTP integration tests
 web/in-app-demo.html     # zero-build static demo of the in-app feed
 ```

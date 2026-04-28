@@ -1,0 +1,34 @@
+meta {
+  name: 03 Opt out of email
+  type: http
+  seq: 3
+}
+
+put {
+  url: {{baseUrl}}/v1/users/{{demoUser}}/preferences
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "channel": "email",
+    "enabled": false
+  }
+}
+
+tests {
+  test("returns 204", function() {
+    expect(res.getStatus()).to.equal(204);
+  });
+}
+
+docs {
+  Disables email for the demo user. After running this, send a
+  notification via Notifications/01 — the welcome template's channels
+  are [email, in_app] but only the in_app delivery will happen.
+  The email is filtered at the worker's preference-check stage and
+  surfaces as an empty deliveries[channel=email] slot (or absent).
+
+  Run Users/04 afterwards to re-enable.
+}

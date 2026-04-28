@@ -1,0 +1,42 @@
+meta {
+  name: 07 Slack-only (deploy_succeeded)
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{baseUrl}}/v1/notifications
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "user_id": "{{demoUser}}",
+    "template_name": "deploy_succeeded",
+    "variables": {
+      "deploy_id": "d-42",
+      "service": "notifd",
+      "duration": "2m 10s"
+    }
+  }
+}
+
+tests {
+  test("returns 202", function() {
+    expect(res.getStatus()).to.equal(202);
+  });
+  test("channels include slack", function() {
+    expect(res.getBody().channels).to.include("slack");
+  });
+}
+
+docs {
+  Uses the `deploy_succeeded` template (seeded). Its default_channels
+  are ["slack", "in_app"] — so this notification routes to Slack
+  (captured by the mock webhook at http://localhost:9000/received)
+  and in-app, never email.
+
+  Open http://localhost:9000/received in a browser after running this
+  to see the captured webhook JSON payload.
+}

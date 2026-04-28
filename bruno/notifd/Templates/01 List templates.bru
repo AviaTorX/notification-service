@@ -1,0 +1,30 @@
+meta {
+  name: 01 List templates
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/v1/templates
+  body: none
+  auth: none
+}
+
+tests {
+  test("returns 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  test("includes the three seeded templates", function() {
+    const names = res.getBody().map(function(t) { return t.name; });
+    expect(names).to.include("welcome");
+    expect(names).to.include("password_reset");
+    expect(names).to.include("deploy_succeeded");
+  });
+}
+
+docs {
+  Lists all templates. Migration 0001 seeds three:
+    - welcome           — email + in_app
+    - password_reset    — email only
+    - deploy_succeeded  — slack + in_app
+}

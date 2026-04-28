@@ -1,0 +1,21 @@
+meta {
+  name: 03 Metrics
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/metrics
+  body: none
+  auth: none
+}
+
+headers {
+  ~X-API-Key:
+}
+
+docs {
+  Prometheus exposition. Grep for notifications_delivered_total,
+  http_request_duration_seconds, rate_limit_rejections_total to see
+  the service's signals.
+}

@@ -1,0 +1,9 @@
+{
+  "version": "1",
+  "name": "notifd",
+  "type": "collection",
+  "ignore": [
+    "node_modules",
+    ".git"
+  ]
+}

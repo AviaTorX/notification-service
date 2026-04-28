@@ -1,0 +1,31 @@
+meta {
+  name: 05 Delete template (409 if referenced)
+  type: http
+  seq: 5
+}
+
+delete {
+  url: {{baseUrl}}/v1/templates/{{createdTemplateId}}
+  body: none
+  auth: none
+}
+
+tests {
+  test("returns 204 if no notifications reference it, or 409 if they do", function() {
+    expect([204, 409]).to.include(res.getStatus());
+  });
+}
+
+docs {
+  Tries to delete the custom template from #2.
+
+  - If no notification has ever been sent with this template → 204.
+  - If any notification exists with template_id pointing at this →
+    409 Conflict. The schema has ON DELETE RESTRICT specifically to
+    prevent silently orphaning queued work or breaking historical
+    audit trails.
+
+  Try sending a notification with this template first
+  (notifications/07 would be a good candidate if you tweak the
+  template_name) to demonstrate the 409 path.
+}

@@ -1,0 +1,22 @@
+meta {
+  name: 02 Readyz
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/readyz
+  body: none
+  auth: none
+}
+
+headers {
+  ~X-API-Key:
+}
+
+docs {
+  Readiness probe. Returns 200 only if Postgres AND Redis are reachable
+  in the last 2 seconds. Kubernetes uses this to decide "should I send
+  traffic to this pod?" Pod stays running on a 503 but gets removed
+  from the load balancer until recovery.
+}

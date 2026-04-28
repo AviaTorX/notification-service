@@ -1,0 +1,38 @@
+headers {
+  X-API-Key: {{apiKey}}
+  Content-Type: application/json
+}
+
+docs {
+  # notifd
+
+  Multi-channel notification service (email, Slack, in-app) with templates,
+  scheduling, retries, idempotency, rate limiting, preferences, and
+  observability.
+
+  ## Before you run anything
+
+  1. Boot the stack: `docker compose up -d --build` from the repo root.
+  2. Confirm it's healthy: open `http://localhost:8080/readyz`.
+  3. Pick the **Local** environment in Bruno (top-right dropdown).
+  4. Run the demo in folder order — the scripts capture IDs from earlier
+     requests so later ones just work.
+
+  ## What you can watch while you click
+
+  | URL                              | What                                   |
+  |----------------------------------|----------------------------------------|
+  | http://localhost:8025            | Mailpit — emails land here             |
+  | http://localhost:9000/received   | Slack-mock — webhook POSTs captured    |
+  | http://localhost:8090            | Asynqmon — queues, retries, DLQ        |
+  | http://localhost:8080/metrics    | API Prometheus metrics                 |
+  | http://localhost:9101/metrics    | Worker Prometheus metrics              |
+
+  ## Environment variables
+
+  - `baseUrl`  — API origin, default `http://localhost:8080`
+  - `apiKey`   — the X-API-Key header value, default `dev-api-key-change-me`
+  - `demoUser` — UUID of the seeded demo user (created by migration 0001)
+  - `notificationId` — populated at runtime by the "Create instant"
+    request so follow-up requests can fetch the result
+}

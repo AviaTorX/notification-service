@@ -1,0 +1,30 @@
+meta {
+  name: 04 Opt back into email
+  type: http
+  seq: 4
+}
+
+put {
+  url: {{baseUrl}}/v1/users/{{demoUser}}/preferences
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "channel": "email",
+    "enabled": true
+  }
+}
+
+tests {
+  test("returns 204", function() {
+    expect(res.getStatus()).to.equal(204);
+  });
+}
+
+docs {
+  Re-enables email after Users/03 turned it off. Also demonstrates
+  upsert — the row already exists from the previous request, this
+  updates it in place.
+}

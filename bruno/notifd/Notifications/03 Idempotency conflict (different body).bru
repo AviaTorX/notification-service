@@ -1,0 +1,45 @@
+meta {
+  name: 03 Idempotency conflict (different body)
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/v1/notifications
+  body: json
+  auth: none
+}
+
+headers {
+  Idempotency-Key: demo-welcome-001
+}
+
+body:json {
+  {
+    "user_id": "{{demoUser}}",
+    "template_name": "welcome",
+    "variables": {
+      "name": "Someone Else",
+      "product": "Different"
+    }
+  }
+}
+
+tests {
+  test("returns 409 Conflict", function() {
+    expect(res.getStatus()).to.equal(409);
+  });
+  test("error code is 'conflict'", function() {
+    expect(res.getBody().code).to.equal("conflict");
+  });
+}
+
+docs {
+  Same Idempotency-Key as #1 and #2, but a DIFFERENT body (variables
+  changed). This is a client bug — they reused a key for a different
+  operation. The server refuses with 409 Conflict rather than silently
+  dropping the new request.
+
+  Body-hash comparison is SHA-256 of the raw bytes. This check lives
+  in the Redis fast path.
+}

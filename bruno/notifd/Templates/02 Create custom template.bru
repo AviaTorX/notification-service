@@ -1,0 +1,48 @@
+meta {
+  name: 02 Create custom template
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/v1/templates
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "name": "security_alert",
+    "description": "Notifies a user of a suspicious login.",
+    "subject": "Suspicious sign-in from {{location}}",
+    "body_text": "Hi {{name}}, we noticed a sign-in from {{location}} at {{time}}. If this was you, ignore this message.",
+    "body_html": "<p>Hi <b>{{name}}</b>, we noticed a sign-in from <b>{{location}}</b> at {{time}}.</p>",
+    "default_channels": ["email", "in_app"],
+    "required_variables": ["name", "location", "time"]
+  }
+}
+
+script:post-response {
+  if (res.getStatus() === 200 && res.getBody() && res.getBody().id) {
+    bru.setEnvVar("createdTemplateId", res.getBody().id);
+  }
+}
+
+tests {
+  test("returns 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  test("persists required_variables", function() {
+    expect(res.getBody().required_variables).to.deep.equal(["name", "location", "time"]);
+  });
+}
+
+docs {
+  Upsert by name. Running this twice with the same name is a no-op
+  update, not a duplicate.
+
+  The server compile-checks every template slot at upsert time —
+  subject and body_text via text/template, body_html via html/template.
+  A bad template here returns 400 at authoring time rather than
+  DLQ'ing at send time.
+}

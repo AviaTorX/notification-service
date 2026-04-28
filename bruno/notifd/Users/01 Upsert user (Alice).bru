@@ -1,0 +1,38 @@
+meta {
+  name: 01 Upsert user (Alice)
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/v1/users
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "email": "alice@example.com",
+    "slack_webhook": "http://slack-mock:9000/webhook"
+  }
+}
+
+script:post-response {
+  if (res.getStatus() === 200 && res.getBody() && res.getBody().id) {
+    bru.setEnvVar("aliceUserId", res.getBody().id);
+  }
+}
+
+tests {
+  test("returns 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  test("server-generated UUID on the response", function() {
+    expect(res.getBody().id).to.be.a("string");
+  });
+}
+
+docs {
+  Creates a new user. Running this twice without explicit `id` creates
+  two distinct users. To update an existing user, pass `id` explicitly.
+}

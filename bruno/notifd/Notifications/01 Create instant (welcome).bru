@@ -1,0 +1,59 @@
+meta {
+  name: 01 Create instant (welcome)
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/v1/notifications
+  body: json
+  auth: none
+}
+
+headers {
+  Idempotency-Key: demo-welcome-001
+}
+
+body:json {
+  {
+    "user_id": "{{demoUser}}",
+    "template_name": "welcome",
+    "variables": {
+      "name": "Avinash",
+      "product": "NotifCo"
+    }
+  }
+}
+
+script:post-response {
+  // Capture the notification ID so other requests in this collection
+  // can fetch, replay, and mark-read without the reviewer copy-pasting.
+  if (res.getStatus() === 202 && res.getBody() && res.getBody().id) {
+    bru.setEnvVar("notificationId", res.getBody().id);
+  }
+}
+
+tests {
+  test("returns 202 Accepted", function() {
+    expect(res.getStatus()).to.equal(202);
+  });
+  test("carries a notification id", function() {
+    expect(res.getBody().id).to.be.a("string");
+  });
+  test("channels match the welcome template defaults (email + in_app)", function() {
+    expect(res.getBody().channels).to.include("email");
+    expect(res.getBody().channels).to.include("in_app");
+  });
+}
+
+docs {
+  Hits the `welcome` template (seeded by migration 0001). No explicit
+  channels in the request, so the API falls back to the template's
+  default_channels: email + in_app.
+
+  Watch Mailpit on :8025 — the email lands there within ~1 second.
+  The in-app row shows up in GET /v1/users/:id/in-app-notifications.
+
+  The Idempotency-Key is deliberately deterministic ("demo-welcome-001")
+  so you can show the replay behaviour in request #2 of this folder.
+}

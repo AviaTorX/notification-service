@@ -1,0 +1,26 @@
+meta {
+  name: 06 Mark in-app as read
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/v1/users/{{demoUser}}/in-app-notifications/{{inAppItemId}}/read
+  body: none
+  auth: none
+}
+
+tests {
+  test("returns 204 or 404 (404 if already read)", function() {
+    expect([204, 404]).to.include(res.getStatus());
+  });
+}
+
+docs {
+  Marks the first in-app item from Users/05 as read. ID captured
+  automatically.
+
+  Idempotent in the sense that once read, subsequent calls return 404
+  (no unread row to mark). A separate "mark all read" endpoint would
+  be a natural extension; not built.
+}

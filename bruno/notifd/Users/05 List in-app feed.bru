@@ -1,0 +1,48 @@
+meta {
+  name: 05 List in-app feed
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{baseUrl}}/v1/users/{{demoUser}}/in-app-notifications?limit=5
+  body: none
+  auth: none
+}
+
+params:query {
+  limit: 5
+  ~unread: true
+  ~before: 2026-04-28T00:00:00.000Z|00000000-0000-0000-0000-000000000000
+}
+
+script:post-response {
+  // Capture the first notification's id so we can mark it read
+  // in the next request without copy-paste.
+  const body = res.getBody();
+  if (res.getStatus() === 200 && body && body.items && body.items.length > 0) {
+    bru.setEnvVar("inAppItemId", body.items[0].id);
+  }
+}
+
+tests {
+  test("returns 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  test("response envelope has items + optional next_cursor", function() {
+    expect(res.getBody().items).to.be.an("array");
+  });
+}
+
+docs {
+  Response shape: { "items": [...], "next_cursor": "<rfc3339nano>|<uuid>" }
+
+  Cursor pagination via a compound (created_at, id) keyset so
+  same-timestamp rows never skip across pages. Pass `next_cursor`
+  back as `before` to page older.
+
+  Query params:
+    limit  - default 50, max 200
+    unread - if "true", filter to read_at IS NULL only
+    before - paginate older
+}

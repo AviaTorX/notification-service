@@ -1,0 +1,25 @@
+meta {
+  name: 02 List preferences
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/v1/users/{{demoUser}}/preferences
+  body: none
+  auth: none
+}
+
+tests {
+  test("returns 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  test("response is an array", function() {
+    expect(res.getBody()).to.be.an("array");
+  });
+}
+
+docs {
+  A missing preference row means the channel is enabled. Only explicit
+  opt-outs appear here. Runs empty on a fresh stack.
+}

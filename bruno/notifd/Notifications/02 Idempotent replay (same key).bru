@@ -1,0 +1,48 @@
+meta {
+  name: 02 Idempotent replay (same key)
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/v1/notifications
+  body: json
+  auth: none
+}
+
+headers {
+  Idempotency-Key: demo-welcome-001
+}
+
+body:json {
+  {
+    "user_id": "{{demoUser}}",
+    "template_name": "welcome",
+    "variables": {
+      "name": "Avinash",
+      "product": "NotifCo"
+    }
+  }
+}
+
+tests {
+  test("still returns 202", function() {
+    expect(res.getStatus()).to.equal(202);
+  });
+  test("response carries Idempotent-Replay header", function() {
+    expect(res.getHeader("idempotent-replay")).to.equal("true");
+  });
+  test("same notification id as the original", function() {
+    expect(res.getBody().id).to.equal(bru.getEnvVar("notificationId"));
+  });
+}
+
+docs {
+  Same body, same Idempotency-Key as request #1. The server returns the
+  ORIGINAL response with an `Idempotent-Replay: true` header. Zero new
+  work — no new row, no new email sent. This is the Stripe-style contract
+  that makes client-side retries safe.
+
+  Fast path: Redis cache lookup hits on (api_key, route, key) with
+  matching body hash.
+}

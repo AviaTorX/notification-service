@@ -1,0 +1,37 @@
+meta {
+  name: 03 Create broken HTML template (400)
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/v1/templates
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "name": "broken_alert",
+    "subject": "Broken",
+    "body_text": "ok",
+    "body_html": "<p>{{ if }}</p>",
+    "default_channels": ["email"]
+  }
+}
+
+tests {
+  test("returns 400 Bad Request", function() {
+    expect(res.getStatus()).to.equal(400);
+  });
+  test("error message mentions body_html", function() {
+    expect(res.getBody().error).to.contain("body_html");
+  });
+}
+
+docs {
+  Deliberately sends a broken `body_html` (`{{ if }}` with no
+  condition). The API rejects at upsert with a clear 400 —
+  html/template's parser is strictly stricter than text/template's,
+  and this is the catch for malformed HTML templates.
+}
